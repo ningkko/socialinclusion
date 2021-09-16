@@ -1,0 +1,98 @@
+---
+title: "Social Inclusion Analysis"
+author: "Yining Hua"
+date: "9/16/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lme4)
+library(texreg)
+library(stargazer)
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r}
+dat <- read_csv("~/urbanplanning/preliminary_data.csv")
+
+dat$migration.type <- dat$migration.self
+dat$migration.type[dat$migration.type == 1] <- "self"
+dat$migration.type[dat$migration.fellows == 1] <- "fellows"
+dat$migration.type[dat$migration.relatives == 1] <- "relatives"
+
+col_names <- c("ethnicity","marriage","diabete_hypertension","group","recent_disease","insuranced","gender","worked_before5.1")
+dat[,col_names] <- lapply(dat[,col_names] , factor)
+
+dat$income.normalized <- (dat$income-mean(dat$income,na.rm=TRUE))/sd(dat$income, na.rm = TRUE)
+dat$income.thousand <- dat$income/1000
+
+dat$participant <- as.character(dat$participant)
+
+dat$health <- as.numeric(dat$health)
+```
+```{r}
+head(dat)
+```
+
+```{r}
+dat$inclusion <-dat$like.current.city+dat$natives.like.me-dat$natives.lookdown.me-dat$native.customs.better+dat$i.am.native
+dat$inclusion <- (dat$inclusion-min(dat$inclusion, na.rm = TRUE))/(max(dat$inclusion, na.rm = TRUE)-min(dat$inclusion, na.rm = TRUE)) ## normalization
+dat$loneliness.level <- -dat$inclusion + dat$migration.self - dat$migration.relatives - dat$migration.fellows
+dat$loneliness.level <- (dat$loneliness.level-min(dat$loneliness.level, na.rm=TRUE))/(max(dat$loneliness.level, na.rm = TRUE)-min(dat$loneliness.level, na.rm = TRUE)) ## normalization
+
+dat
+```
+
+```{r}
+cbPalette <- c("#e61212", "#ffb300", "#22ff00", "#0015ff", "#00fbff")
+
+p1 <- ggplot(dat, aes(health, colour = group, fill=group)) +
+      geom_bar(alpha=0.8) +
+      labs(
+           x = "Level of health",
+           colour = "group") +
+      theme_classic(base_size = 10)
+p1
+```
+
+
+```{r}
+m0 <- lmer(health ~ group + like.current.city + natives.like.me + natives.lookdown.me + native.customs.better + i.am.native + participated_in_group_activity
+           + migration.type + (1|income) + (1|worked_before5.1) +  (1| education) + (1 |gender) + (1|ethnicity) + (1|marriage) + (1|recent_disease) + (1|insuranced), 
+           data=dat)
+```
+
+
+```{r}
+
+m1 <- lmer(health ~ group + like.current.city + natives.like.me + natives.lookdown.me + native.customs.better + i.am.native + participated_in_group_activity
+           + migration.type + (1|income.normalized) + (1|worked_before5.1) +  (1| education) + (1 |gender) + (1|ethnicity) + (1|marriage) + (1|recent_disease) + (1|insuranced), 
+           data=dat)
+```
+
+```{r}
+m2 <- lmer(health ~ group + inclusion + participated_in_group_activity + migration.type 
+           + (1|income.normalized) + (1|worked_before5.1) +  (1| education) + (1 |gender) + (1|ethnicity) + (1|marriage) + (1|recent_disease) + (1|insuranced), 
+           data=dat)
+```
+
+```{r}
+m3 <- lmer(health ~ group + inclusion + participated_in_group_activity + loneliness.level 
+           + (1|income.normalized) + (1|worked_before5.1) +  (1| education) + (1 |gender) + (1|ethnicity) + (1|marriage) + (1|recent_disease) + (1|insuranced), 
+           data=dat)
+```
+
+
+```{r}
+screenreg(c(m0,m1,m2,m3))
+```
+
+```{r}
+
+```
+
