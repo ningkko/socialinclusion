@@ -8,15 +8,15 @@
 不同意,-1
 完全不同意,-2
 不清楚,
-未上过小学,0
-小学,1
-初中,2
-高中/中专,3
-大学专科,4
-大学本科,5
-研究生,6
 女,1
 男,2
+未上过小学,no education
+小学,primary school
+初中,midschool
+高中/中专,highschool
+大学专科,junior college
+大学本科,college
+研究生,grad
 汉,1
 回,2
 蒙,3
@@ -36,20 +36,38 @@
 傣,16
 布依,17
 瑶,18
-未婚,0
-同居,1
-初婚,2
-再婚,3
-离婚,4
-丧偶,5
+未婚,unmarried
+同居,living together
+初婚,just married
+再婚,remarried
+离婚,divorced
+丧偶,widowed
 均未患有,0
 未就诊,
-患有糖尿病,1
-患有高血压和糖尿病,3
-患有高血压,2
+患有糖尿病,db
+患有高血压和糖尿病,db+hpt
+患有高血压,hpt
 健康,4
 基本健康,3
 不健康，但生活能自理,2
 生活不能自理,1
-是，最近一次发生在两周前,1
-是，最近一次发生在两周内,2
+是，最近一次发生在两周前,within 2 weeks
+是，最近一次发生在两周内,before 2 weeks
+跨省,interstate
+省内跨市,intercity
+市内跨县,intercounty
+有固定雇主的雇员,stable job
+雇主,stable job
+自营劳动者,stable job
+无固定雇主的雇员（零工、散工等）,unstable job
+愿意,1
+不愿意,-1
+是,1
+没想好,0
+否,-1
+其他外地人,with other foreiners
+其他本地人,with other natives
+很少与人来往,don't hangout often
+同乡（户口仍在老家）,people from same place
+同乡（户口迁至本地）,people from same place
+同乡（户口迁至本地与老家以来的其他地区）,people from same place
