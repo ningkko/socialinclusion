@@ -1,7 +1,7 @@
 ---
 title: "Social Inclusion Analysis"
 author: "Yining Hua"
-date: "9/16/2021"
+date: "12/10/2021"
 output: pdf_document
 ---
 
@@ -14,33 +14,33 @@ library(stargazer)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(mclogit)
 ```
 
 ```{r}
-dat <- read_csv("~/urbanplanning/preliminary_data.csv")
+dat <- read_csv("preliminary_data.csv")
 
-dat$migration.type <- NA
-dat$migration.type[dat$migration.self == 1] <- "self"
-dat$migration.type[dat$migration.fellows == 1] <- "fellows"
-dat$migration.type[dat$migration.relatives == 1] <- "relatives"
-
-col_names <- c("ethnicity","marriage","diabete_hypertension","group","recent_disease","insuranced","gender","worked_before5.1")
+col_names <- c("job","marriage","diabete.or.hypertension","group","insuranced","gender","worked_before5.1","willing.to.movein","willing.to.stay")
 dat[,col_names] <- lapply(dat[,col_names] , factor)
 
 dat$money.left <- dat$income - dat$expence
+dat$money.left <- (dat$money.left - mean(dat$money.left, na.rm = TRUE)) / sd(dat$money.left, na.rm = TRUE)
 dat$participant <- as.character(dat$participant)
 
-dat$health <- as.numeric(dat$health)*1000
+dat$health <- as.factor(dat$health)
+dat$migration.scale <- as.factor(dat$migration.scale)
+dat$education.group <- as.factor(dat$education)
+dat$health_combined <- as.factor(dat$health_combined)
 ```
+
 ```{r}
 head(dat)
 ```
 
 ```{r}
-dat$natives_inclusion <- dat$natives.like.me-dat$natives.lookdown.me
-dat$city_inclusion <- dat$like.current.city-dat$native.customs.better+dat$i.am.native
-dat$tendency.livehere <- dat$willing.to.movein + dat$willing.to.stay
-dat$migration.companionship <- - dat$migration.self + dat$migration.relatives + dat$migration.fellows
+# dat$natives_inclusion <- dat$natives.like.me-dat$natives.lookdown.me
+dat$city_inclusion <- dat$like.current.city-dat$previous.customs.better+dat$i.am.native + dat$natives.like.me-dat$natives.lookdown.me
+# dat$tendency.livehere <- dat$willing.to.movein + dat$willing.to.stay
 # dat$loneliness.level <- (dat$loneliness.level-min(dat$loneliness.level, na.rm=TRUE))/(max(dat$loneliness.level, na.rm = TRUE)-min(dat$loneliness.level, na.rm = TRUE)) ## normalization
 
 dat
@@ -48,50 +48,87 @@ dat
 ```{r}
 ## regroup education
 dat$education.group <- NA
-dat$education.group[dat$education == 0] <- "0"
-dat$education.group[(dat$education == 1) || (dat$education == 2) ] <- "1, 2"
-dat$education.group[dat$education == 3] <- "3"
-dat$education.group[(dat$education == 4) || (dat$education == 5)] <- "4, 5"
-dat$education.group[dat$education == 6] <- "6"
+dat$education.group[dat$education == "no education"] <- "low"
+dat$education.group[dat$education == "primary school"] <- "low"
+dat$education.group[dat$education == "midschool"] <- "middle"
+dat$education.group[dat$education == "highschool"] <- "middle"
+dat$education.group[dat$education =="junior college"] <- "middle"
+dat$education.group[dat$education == "college"] <- "high"
+dat$education.group[dat$education == "grad"] <- "high"
 ```
 
 ```{r}
 ## regroup ethnicity 
-dat$ethnicity.group <- "other"
-dat$ethnicity.group[dat$ethnicity == 1] <- "han"
+#dat$ethnicity.group <- "other"
+#dat$ethnicity.group[dat$ethnicity == 1] <- "han"
+```
+```{r}
+library(dplyr)
 ```
 
 ```{r}
 cbPalette <- c("#e61212", "#ffb300", "#22ff00", "#0015ff", "#00fbff")
+d2 <- dat %>% 
+  group_by(group, willing.to.movein) %>% 
+  summarise(count = n()) %>% 
+  mutate(perc = count/sum(count))
 
-p1 <- ggplot(dat, aes(health, colour = group, fill=group)) +
-      geom_bar(alpha=0.8) +
-      labs(
-           x = "Level of health",
-           colour = "group") +
-      theme_classic(base_size = 10)
-p1
+ggplot(d2, aes(x = factor(group), y = perc*100, fill = factor(willing.to.movein))) +
+  geom_bar(stat="identity", width = 0.7) +
+  labs(x = "group", y = "percent", fill = "willing.to.movein") +
+  theme_minimal(base_size = 14)
 ```
+
+```{r}
+cbPalette <- c("#e61212", "#ffb300", "#22ff00", "#0015ff", "#00fbff")
+d2 <- dat %>% 
+  group_by(group, willing.to.stay) %>% 
+  summarise(count = n()) %>% 
+  mutate(perc = count/sum(count))
+
+ggplot(d2, aes(x = factor(group), y = perc*100, fill = factor(willing.to.stay))) +
+  geom_bar(stat="identity", width = 0.7) +
+  labs(x = "group", y = "percent", fill = "willing.to.stay") +
+  theme_minimal(base_size = 14)
+```
+
+```{r}
+unmarried <- dat[dat$marriage %in% c("unmarried","divorced","widowed"), ]
+d2.unmarried <- unmarried %>% 
+  group_by(group, willing.to.stay) %>% 
+  summarise(count = n()) %>% 
+  mutate(perc = count/sum(count))
+```
+
+```{r}
+ggplot(d2.unmarried, aes(x = factor(group), y = perc*100, fill = factor(willing.to.stay))) +
+  geom_bar(stat="identity", width = 0.7) +
+  labs(x = "group", y = "percent", fill = "willing.to.stay") +
+  theme_minimal(base_size = 14)
+```
+
 
 
 ```{r}
-m0 <- lmer(health ~ group + like.current.city + natives.like.me + natives.lookdown.me + native.customs.better + i.am.native + willing.to.movein + willing.to.stay + (1|participated_in_group_activity) + (1|migration.companionship) + (1|money.left) + (1|job) + (1|migration_scale) + (1| education) + (1 |gender) + (1|ethnicity.group) + (1|marriage) + (1|recent_disease) + (1|insuranced), 
-           data=dat)
-```
+dat$willing.to.stay <- relevel(dat$willing.to.stay, ref = "no")
+dat$group <- relevel(dat$group, ref = "no group")
+dat$job <- relevel(dat$job, ref = "unstable job")
+dat$education.group <- relevel(as.factor(dat$education.group), ref = "low")
+dat$ethnicity <- relevel(as.factor(dat$ethnicity), ref = "1")
 
+```
 
 ```{r}
 
-m1 <- lmer(health ~ group + natives_inclusion + city_inclusion + tendency.livehere + (1|participated_in_group_activity)
-           + (1|migration.type) + (1|money.left) + (1|job) + (1|migration_scale)+  (1| education) + (1 |gender) + (1|ethnicity.group) + (1|marriage) + (1|recent_disease) + (1|insuranced), 
-           data=dat)
+mod1 <- mblogit(formula= willing.to.stay ~ group, data=dat)
+summary(mod1)
 ```
-
-
 
 ```{r}
-screenreg(c(m0,m1))
+mod2 <- mblogit(formula= willing.to.stay ~ group + city_inclusion + money.left + education.group, data=dat)
+summary(mod2)
 ```
+
 
 ```{r}
 write_csv(dat,"processed_data.csv")
