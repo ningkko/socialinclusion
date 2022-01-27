@@ -1,7 +1,7 @@
 ---
 title: "Social Inclusion Analysis"
 author: "Yining Hua"
-date: "12/10/2021"
+date: "01/27/2021"
 output: pdf_document
 ---
 
@@ -17,27 +17,25 @@ library(ggplot2)
 library(mclogit)
 ```
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 dat <- read_csv("preliminary_data.csv")
 
-col_names <- c("job","marriage","diabete.or.hypertension","group","insuranced","gender","worked_before5.1","willing.to.movein","willing.to.stay")
+col_names <- c("job","marriage", "group","gender","has_local_child","from_rural")
 dat[,col_names] <- lapply(dat[,col_names] , factor)
 
 dat$money.left <- dat$income - dat$expence
 dat$money.left <- (dat$money.left - mean(dat$money.left, na.rm = TRUE)) / sd(dat$money.left, na.rm = TRUE)
 dat$participant <- as.character(dat$participant)
 
-dat$health <- as.factor(dat$health)
 dat$migration.scale <- as.factor(dat$migration.scale)
 dat$education.group <- as.factor(dat$education)
-dat$health_combined <- as.factor(dat$health_combined)
 ```
 
 ```{r}
 head(dat)
 ```
 
-```{r}
+```{r, warning=FALSE}
 # dat$natives_inclusion <- dat$natives.like.me-dat$natives.lookdown.me
 dat$city_inclusion <- dat$like.current.city-dat$previous.customs.better+dat$i.am.native + dat$natives.like.me-dat$natives.lookdown.me
 # dat$tendency.livehere <- dat$willing.to.movein + dat$willing.to.stay
@@ -62,46 +60,31 @@ dat$education.group[dat$education == "grad"] <- "high"
 #dat$ethnicity.group <- "other"
 #dat$ethnicity.group[dat$ethnicity == 1] <- "han"
 ```
-```{r}
+```{r, include=FALSE}
 library(dplyr)
 ```
 
-```{r}
+```{r, warning=FALSE}
 cbPalette <- c("#e61212", "#ffb300", "#22ff00", "#0015ff", "#00fbff")
 d2 <- dat %>% 
-  group_by(group, willing.to.movein) %>% 
+  group_by(group, pos_stay) %>% 
   summarise(count = n()) %>% 
   mutate(perc = count/sum(count))
 
-ggplot(d2, aes(x = factor(group), y = perc*100, fill = factor(willing.to.movein))) +
+ggplot(d2, aes(x = factor(group), y = perc*100, fill = factor(pos_stay))) +
   geom_bar(stat="identity", width = 0.7) +
-  labs(x = "group", y = "percent", fill = "willing.to.movein") +
+  labs(x = "group", y = "percent", fill = "pos_stay") +
   theme_minimal(base_size = 14)
 ```
 
-```{r}
+```{r, warning=FALSE}
 cbPalette <- c("#e61212", "#ffb300", "#22ff00", "#0015ff", "#00fbff")
 d2 <- dat %>% 
-  group_by(group, willing.to.stay) %>% 
+  group_by(group, pos_stay) %>% 
   summarise(count = n()) %>% 
   mutate(perc = count/sum(count))
 
-ggplot(d2, aes(x = factor(group), y = perc*100, fill = factor(willing.to.stay))) +
-  geom_bar(stat="identity", width = 0.7) +
-  labs(x = "group", y = "percent", fill = "willing.to.stay") +
-  theme_minimal(base_size = 14)
-```
-
-```{r}
-unmarried <- dat[dat$marriage %in% c("unmarried","divorced","widowed"), ]
-d2.unmarried <- unmarried %>% 
-  group_by(group, willing.to.stay) %>% 
-  summarise(count = n()) %>% 
-  mutate(perc = count/sum(count))
-```
-
-```{r}
-ggplot(d2.unmarried, aes(x = factor(group), y = perc*100, fill = factor(willing.to.stay))) +
+ggplot(d2, aes(x = factor(group), y = perc*100, fill = factor(pos_stay))) +
   geom_bar(stat="identity", width = 0.7) +
   labs(x = "group", y = "percent", fill = "willing.to.stay") +
   theme_minimal(base_size = 14)
@@ -110,27 +93,48 @@ ggplot(d2.unmarried, aes(x = factor(group), y = perc*100, fill = factor(willing.
 
 
 ```{r}
-dat$willing.to.stay <- relevel(dat$willing.to.stay, ref = "no")
 dat$group <- relevel(dat$group, ref = "no group")
 dat$job <- relevel(dat$job, ref = "unstable job")
 dat$education.group <- relevel(as.factor(dat$education.group), ref = "low")
-dat$ethnicity <- relevel(as.factor(dat$ethnicity), ref = "1")
+dat$migration.scale <- relevel(as.factor(dat$migration.scale), ref = "intercounty")
+dat$age_group <- relevel(as.factor(dat$age_group), ref = "15-22")
+
 
 ```
 
 ```{r}
+library(broom)
 
-mod1 <- mblogit(formula= willing.to.stay ~ group, data=dat)
+mod1 <- glm(pos_stay ~ group, data=dat)
+mod2 <- glm(neg_stay ~ group, data=dat)
+```
+
+```{r}
 summary(mod1)
 ```
-
 ```{r}
-mod2 <- mblogit(formula= willing.to.stay ~ group + city_inclusion + money.left + education.group, data=dat)
 summary(mod2)
 ```
 
 
 ```{r}
+mod3 <- glm(pos_stay ~ group + city_inclusion + money.left + 
+            education.group + age_group + marriage + job + has_local_child + 
+            gender + migration.scale + housing_type + from_rural + time_stayed, data=dat)
+summary(mod3)
+```
+
+### We took out the has_local_child co-variate in this model because no one had the variable to be 1 in this group.
+
+```{r}
+mod4 <- glm(neg_stay ~ group + city_inclusion + money.left + 
+            education.group + age_group + marriage + job + 
+            gender + migration.scale + housing_type + from_rural + time_stayed, data=dat)
+summary(mod4)
+```
+
+
+```{r, include=FALSE}
 write_csv(dat,"processed_data.csv")
 ```
 
