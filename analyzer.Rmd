@@ -20,11 +20,15 @@ library(mclogit)
 ```{r, message=FALSE, warning=FALSE}
 dat <- read_csv("preliminary_data.csv")
 
-col_names <- c("job","marriage", "group","gender","has_local_child","from_rural")
+col_names <- c("job","marriage", "group","gender","has_local_child",
+              "from_rural")
 dat[,col_names] <- lapply(dat[,col_names] , factor)
 
 dat$money.left <- dat$income - dat$expence
-dat$money.left <- (dat$money.left - mean(dat$money.left, na.rm = TRUE)) / sd(dat$money.left, na.rm = TRUE)
+
+## Normalize and standardize money left 
+dat$money.left <- (dat$money.left - mean(dat$money.left, na.rm = TRUE)) / 
+                    sd(dat$money.left, na.rm = TRUE)
 dat$participant <- as.character(dat$participant)
 
 dat$migration.scale <- as.factor(dat$migration.scale)
@@ -37,9 +41,10 @@ head(dat)
 
 ```{r, warning=FALSE}
 # dat$natives_inclusion <- dat$natives.like.me-dat$natives.lookdown.me
-dat$city_inclusion <- dat$like.current.city-dat$previous.customs.better+dat$i.am.native + dat$natives.like.me-dat$natives.lookdown.me
+dat$city_inclusion <- dat$like.current.city - dat$previous.customs.better +
+                      dat$i.am.native + dat$natives.like.me - 
+                      dat$natives.lookdown.me
 # dat$tendency.livehere <- dat$willing.to.movein + dat$willing.to.stay
-# dat$loneliness.level <- (dat$loneliness.level-min(dat$loneliness.level, na.rm=TRUE))/(max(dat$loneliness.level, na.rm = TRUE)-min(dat$loneliness.level, na.rm = TRUE)) ## normalization
 
 dat
 ```
@@ -96,7 +101,8 @@ ggplot(d2, aes(x = factor(group), y = perc*100, fill = factor(pos_stay))) +
 dat$group <- relevel(dat$group, ref = "no group")
 dat$job <- relevel(dat$job, ref = "unstable job")
 dat$education.group <- relevel(as.factor(dat$education.group), ref = "low")
-dat$migration.scale <- relevel(as.factor(dat$migration.scale), ref = "intercounty")
+dat$migration.scale <- relevel(as.factor(dat$migration.scale), 
+                                            ref = "intercounty")
 dat$age_group <- relevel(as.factor(dat$age_group), ref = "15-22")
 
 
@@ -120,7 +126,8 @@ summary(mod2)
 ```{r}
 mod3 <- glm(pos_stay ~ group + city_inclusion + money.left + 
             education.group + age_group + marriage + job + has_local_child + 
-            gender + migration.scale + housing_type + from_rural + time_stayed, data=dat)
+            gender + migration.scale + housing_type + from_rural + time_stayed, 
+              data=dat)
 summary(mod3)
 ```
 
@@ -129,7 +136,8 @@ summary(mod3)
 ```{r}
 mod4 <- glm(neg_stay ~ group + city_inclusion + money.left + 
             education.group + age_group + marriage + job + 
-            gender + migration.scale + housing_type + from_rural + time_stayed, data=dat)
+            gender + migration.scale + housing_type + from_rural + time_stayed,
+              data=dat)
 summary(mod4)
 ```
 
